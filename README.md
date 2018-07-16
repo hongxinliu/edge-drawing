@@ -27,4 +27,5 @@ make
 ```
 
 Then you will see like this:
+
  ![image](https://github.com/hongxinliu/edge-drawing/raw/master/data/draw.gif)
