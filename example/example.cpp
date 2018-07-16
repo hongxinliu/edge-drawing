@@ -1,10 +1,11 @@
 /**
- * @brief: demo of ED
+ * @brief: demo for ed
  * @author: hongxinliu <github.com/hongxinliu> <hongxinliu.com>
- * @date: Mar. 05, 2018
+ * @date: Jul. 15, 2018
  */
 
-#include "ED/ED.hpp"
+#include "include/ed.hpp"
+#include <iostream>
 
 int main(int argc, char **argv)
 {
@@ -16,22 +17,22 @@ int main(int argc, char **argv)
     }
 
     // open image
-    cv::Mat img = cv::imread(argv[1]);
-    if(img.empty())
+    cv::Mat image = cv::imread(argv[1]);
+    if(image.empty())
     {
         std::cout<<"Cannot open image file "<<argv[1]<<std::endl;
         return -2;
     }
 
     // detect edges
-    std::vector<std::list<cv::Point>> edges;
+    ed::ED ed;
 	double t = cv::getTickCount();
-    ED::detectEdges(img, edges);
+    auto edges = ed.detectEdges(image);
 	std::cout << "Detect edges in " << (cv::getTickCount() - t) * 1000 / cv::getTickFrequency() << "ms" << std::endl;
 
     // show output
-    cv::imshow("image", img);
-    cv::Mat out(img.rows, img.cols, CV_8UC1, cv::Scalar(0));
+    cv::imshow("image", image);
+    cv::Mat out(image.rows, image.cols, CV_8UC1, cv::Scalar(0));
     for(const auto &edge : edges)
     {
         for(const auto &pt : edge)
@@ -45,7 +46,6 @@ int main(int argc, char **argv)
             }
         }
     }
-    
     cv::waitKey(0);
     cv::destroyAllWindows();
 

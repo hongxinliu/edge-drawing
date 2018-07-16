@@ -1,28 +1,133 @@
 /**
- * @brief: core of ED
+ * @brief: interface of ed
  * @author: hongxinliu <github.com/hongxinliu> <hongxinliu.com>
- * @date: Mar. 05, 2018
+ * @date: Jul. 15, 2018
  */
 
-#include "ED.hpp"
+#include "include/ed.hpp"
+#include <iostream>
+
+namespace ed {
 
 #define GAUSS_SIZE	(5)
 #define GAUSS_SIGMA	(1.0)
 #define SOBEL_ORDER	(1)
 #define SOBEL_SIZE	(3)
 
-int ED::detectEdges(const cv::Mat &image, 
-					std::vector<std::list<cv::Point>> &edges, 
+/**
+ * @brief: direction of edge
+ * @brief: if |Gx|>|Gy|, it is a proposal of vertical edge(EDGE_VER), or it is horizontal edge(EDGE_HOR)
+ */ 
+enum EDGE_DIR 
+{
+	EDGE_HOR, 
+	EDGE_VER 
+};
+
+/**
+ * @brief: a sign for recording status of each pixel in tracing
+ */
+enum STATUS
+{
+    STATUS_UNKNOWN = 0, 
+    STATUS_BACKGROUND = 1, 
+    STATUS_EDGE = 255
+};
+
+/**
+ * @brief: Trace direction
+ */
+enum TRACE_DIR
+{	
+	TRACE_LEFT,
+	TRACE_RIGHT,
+	TRACE_UP,
+	TRACE_DOWN
+};
+
+class ED_Internal
+{
+public:
+    std::vector<std::list<cv::Point>> detectEdges(const cv::Mat &image, 
+						                          const int proposal_thresh, 
+                                                  const int anchor_interval, 
+                                                  const int anchor_thresh);
+
+private:
+    /**
+	 * @brief: calculate gradient magnitude and orientation
+	 * @param: gray [in] input grayscale image
+	 * @param: M [out] gradient magnitude, actually |Gx|+|Gy|
+	 * @param: O [out] gradient orientation, refer to the definition of EDGE_DIR
+	 */
+	void getGradient(const cv::Mat &gray, 
+                     cv::Mat &M, 
+                     cv::Mat &O);
+
+	/**
+	 * @brief: get anchors
+	 * @param: M [in] gradient magnitude
+	 * @param: O [in] gradient orientation
+	 * @param: proposal_thresh [in] see above
+	 * @param: anchor_interval [in] see above
+	 * @param: anchor_thresh [in] see above
+	 * @param: anchors [out] anchors
+	 */
+	void getAnchors(const cv::Mat &M, 
+					const cv::Mat &O, 
 					const int proposal_thresh, 
-					const int anchor_interval, 
-					const int anchor_thresh)
+                    const int anchor_interval, 
+                    const int anchor_thresh, 
+                    std::vector<cv::Point> &anchors);
+
+	/**
+	 * @brief: trace edge from an anchor
+	 * @param: M [in] gradient magnitude
+	 * @param: O [in] gradient orientation
+	 * @param: anchor [in] anchor point to be traced from
+	 * @param: status [in|out] status record of each pixel, see the definition of STATUS
+	 * @param: edges [out] traced edge would be push_back to
+	 */
+	void traceFromAnchor(const cv::Mat &M, 
+                         const cv::Mat &O, 
+                         const int proposal_thresh, 
+                         const cv::Point &anchor, 
+                         cv::Mat &status, 
+                         std::vector<std::list<cv::Point>> &edges);
+
+	/**
+	 * @brief: main loop of tracing edge
+	 * @param: M [in] gradient magnitude
+	 * @param: O [in] gradient orientation
+	 * @param: pt_last [in] last point
+	 * @param: pt_cur [in] current point to be evaluated
+	 * @param: dir_last [in] last trace direction
+	 * @param: push_back [in] push the traced point to the back or front of list
+	 * @param: status [in|out] status record
+	 * @param: edge [out] traced edge
+	 */
+	void trace(const cv::Mat &M, 
+               const cv::Mat &O, 
+               const int proposal_thresh, 
+               cv::Point pt_last, 
+               cv::Point pt_cur, 
+               TRACE_DIR dir_last, 
+               bool push_back, 
+               cv::Mat &status, 
+               std::list<cv::Point> &edge);
+};
+
+std::vector<std::list<cv::Point>> ED_Internal::detectEdges(const cv::Mat &image, 
+                                                           const int proposal_thresh, 
+                                                           const int anchor_interval, 
+                                                           const int anchor_thresh)
 {
 	// 0.preparation
     cv::Mat gray;
     if(image.empty())
     {
         std::cout<<"Empty image input!"<<std::endl;
-        return -1;
+        return std::vector<std::list<cv::Point>>();
     }
     if(image.type() == CV_8UC1)
         gray = image.clone();
@@ -31,7 +136,7 @@ int ED::detectEdges(const cv::Mat &image,
     else
     {
         std::cout<<"Unknow image type!"<<std::endl;
-        return -2;
+        return std::vector<std::list<cv::Point>>();
     }
 
     // 1.Gauss blur
@@ -47,16 +152,16 @@ int ED::detectEdges(const cv::Mat &image,
 
     // 4.trace edges from anchors
     cv::Mat status(gray.rows, gray.cols, CV_8UC1, cv::Scalar(STATUS_UNKNOWN)); //Init all status to STATUS_UNKNOWN
-    edges.clear();
+    std::vector<std::list<cv::Point>> edges;
     for(const auto &anchor : anchors)
         traceFromAnchor(M, O, proposal_thresh, anchor, status, edges);
     
-    return int(edges.size());
+    return edges;
 }
 
-void ED::getGradient(const cv::Mat &gray, 
-					 cv::Mat &M, 
-					 cv::Mat &O)
+void ED_Internal::getGradient(const cv::Mat &gray, 
+					          cv::Mat &M, 
+                              cv::Mat &O)
 {
 	cv::Mat Gx, Gy;
     cv::Sobel(gray, Gx, CV_16SC1, SOBEL_ORDER, 0, SOBEL_SIZE);
@@ -78,12 +183,12 @@ void ED::getGradient(const cv::Mat &gray,
     }
 }
 
-void ED::getAnchors(const cv::Mat &M, 
-					const cv::Mat &O, 
-					const int proposal_thresh, 
-					const int anchor_interval, 
-					const int anchor_thresh, 
-					std::vector<cv::Point> &anchors)
+void ED_Internal::getAnchors(const cv::Mat &M, 
+					         const cv::Mat &O, 
+                             const int proposal_thresh, 
+                             const int anchor_interval, 
+                             const int anchor_thresh, 
+                             std::vector<cv::Point> &anchors)
 {
 	anchors.clear();
 
@@ -114,12 +219,12 @@ void ED::getAnchors(const cv::Mat &M,
     }
 }
 
-void ED::traceFromAnchor(const cv::Mat &M, 
-						 const cv::Mat &O, 
-						 const int proposal_thresh, 
-						 const cv::Point &anchor, 
-						 cv::Mat &status, 
-						 std::vector<std::list<cv::Point>> &edges)
+void ED_Internal::traceFromAnchor(const cv::Mat &M, 
+						          const cv::Mat &O, 
+                                  const int proposal_thresh, 
+                                  const cv::Point &anchor, 
+                                  cv::Mat &status, 
+                                  std::vector<std::list<cv::Point>> &edges)
 {
 	// if this anchor point has already been visited
     if(status.at<uchar>(anchor.y, anchor.x) != STATUS_UNKNOWN)
@@ -168,15 +273,15 @@ void ED::traceFromAnchor(const cv::Mat &M,
     edges.push_back(edge);
 }
 
-void ED::trace(const cv::Mat &M, 
-			   const cv::Mat &O, 
-			   const int proposal_thresh, 
-			   cv::Point pt_last, 
-			   cv::Point pt_cur, 
-			   TRACE_DIR dir_last, 
-			   bool push_back, 
-			   cv::Mat &status, 
-			   std::list<cv::Point> &edge)
+void ED_Internal::trace(const cv::Mat &M, 
+			            const cv::Mat &O, 
+                        const int proposal_thresh, 
+			            cv::Point pt_last, 
+			            cv::Point pt_cur, 
+			            TRACE_DIR dir_last, 
+			            bool push_back, 
+			            cv::Mat &status, 
+			            std::list<cv::Point> &edge)
 {
 	// current direction
     TRACE_DIR dir_cur;
@@ -313,4 +418,24 @@ void ED::trace(const cv::Mat &M,
 			}
         }
     }
+}
+
+ED::ED() : 
+ed_(new ED_Internal())
+{
+}
+
+ED::~ED()
+{
+    delete ed_;
+}
+
+std::vector<std::list<cv::Point>> ED::detectEdges(const cv::Mat &image, 
+						                          const int proposal_thresh, 
+                                                  const int anchor_interval, 
+                                                  const int anchor_thresh)
+{
+    return ed_->detectEdges(image, proposal_thresh, anchor_interval, anchor_thresh);
+}
+
 }

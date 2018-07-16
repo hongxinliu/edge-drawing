@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(EdgeDrawing)
+project(ed)
 
 # general
 add_compile_options(-Wall -g -fPIC)
@@ -14,6 +14,19 @@ endif()
 # packages
 find_package(OpenCV REQUIRED)
 
-# targets
-add_subdirectory(ED)
-add_subdirectory(examples)
+# directories
+include_directories(.)
+
+# ed
+add_library(ed src/ed.cpp)
+target_link_libraries(ed ${OpenCV_LIBS})
+
+# example
+add_executable(example example/example.cpp)
+target_link_libraries(example ed)
+
+# install
+install(TARGETS ed example 
+        RUNTIME DESTINATION bin 
+        LIBRARY DESTINATION lib 
+        ARCHIVE DESTINATION lib)

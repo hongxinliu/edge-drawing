@@ -22,13 +22,9 @@ This is an implementation of Edge Drawing algorithm.
 ```
 git clone https://github.com/hongxinliu/edge-drawing.git
 cd edge-drawing
-mkdir build
-cd build
-cmake ..
 make
-./examples/example ../data/lena.jpg
+./build/bin/example data/lena.jpg
 ```
 
 Then you will see like this:
-
  ![image](https://github.com/hongxinliu/edge-drawing/raw/master/data/draw.gif)
