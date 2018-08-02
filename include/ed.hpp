@@ -8,6 +8,8 @@
 #define _ED_ED_HPP
 
 #include <opencv2/opencv.hpp>
+#include <vector>
+#include <list>
 
 namespace ed {
 
