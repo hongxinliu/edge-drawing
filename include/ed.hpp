@@ -10,6 +10,7 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <list>
+#include <memory>
 
 namespace ed {
 
@@ -19,11 +20,6 @@ class ED
 {
 public:
     ED();
-    ~ED();
-    ED(ED&) = delete;
-    ED(ED&&) = delete;
-    ED& operator=(ED&) = delete;
-    ED& operator=(ED&&) = delete;
 
 public:
     std::vector<std::list<cv::Point>> detectEdges(const cv::Mat &image, 
@@ -32,7 +28,7 @@ public:
                                                   const int anchor_thresh = 8);
 
 private:
-    ED_Internal *ed_;
+    std::shared_ptr<ED_Internal> ed_;
 };
 
 }

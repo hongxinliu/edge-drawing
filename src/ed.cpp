@@ -425,11 +425,6 @@ ed_(new ED_Internal())
 {
 }
 
-ED::~ED()
-{
-    delete ed_;
-}
-
 std::vector<std::list<cv::Point>> ED::detectEdges(const cv::Mat &image, 
 						                          const int proposal_thresh, 
                                                   const int anchor_interval, 
