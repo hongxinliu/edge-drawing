@@ -15,8 +15,7 @@ This is an implementation of Edge Drawing algorithm.
 -----
 
 ## Requirements
-* OpenCV 2.x or 3.x
-* CMake
+* OpenCV 2.x or later
 
 ## Usage
 ```
