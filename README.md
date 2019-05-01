@@ -28,4 +28,4 @@ make
 
 Then you will see like this:
 
- ![image](https://github.com/hongxinliu/edge-drawing/raw/master/data/draw.gif)
+ ![image](https://cdn.nlark.com/yuque/0/2019/gif/297742/1556283395103-assets/web-upload/6bafce0f-9ee4-4bd8-aabb-cac4bd15f0c3.gif)
